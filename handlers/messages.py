@@ -177,10 +177,9 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         reply = f"✅ Документ сохранён:\n`{filepath}`"
 
-        # fix: сохраняем подпись если есть
         if message.caption:
-            caption_path = fs.save_message(message.caption, user.username or "unknown", user.id)
-            reply += f"\n📝 Подпись сохранена:\n`{caption_path}`"
+            caption_path = fs.save_sidecar(filepath, message.caption)
+            reply += f"\n📝 Подпись рядом:\n`{caption_path}`"
 
         await message.reply_text(reply, parse_mode="Markdown")
     except Exception as e:
@@ -215,10 +214,9 @@ async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
         reply = f"✅ Изображение сохранено:\n`{filepath}`"
 
-        # fix: сохраняем подпись если есть
         if message.caption:
-            caption_path = fs.save_message(message.caption, user.username or "unknown", user.id)
-            reply += f"\n📝 Подпись сохранена:\n`{caption_path}`"
+            caption_path = fs.save_sidecar(filepath, message.caption)
+            reply += f"\n📝 Подпись рядом:\n`{caption_path}`"
 
         await message.reply_text(reply, parse_mode="Markdown")
     except Exception as e:

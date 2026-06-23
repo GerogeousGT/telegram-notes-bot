@@ -100,6 +100,13 @@ class FileSaver:
 
         return str(dest_path)
 
+    def save_sidecar(self, file_path: str, text: str) -> str:
+        """Сохраняет текст-подпись рядом с файлом (.md с тем же именем)"""
+        sidecar_path = Path(file_path).with_suffix(".md")
+        with open(sidecar_path, "w", encoding="utf-8") as f:
+            f.write(f"# Подпись\n\n{text}\n")
+        return str(sidecar_path)
+
     def save_link(self, url: str, title: str = "") -> str:
         """Сохраняет ссылку в файл"""
         filename = f"{self.get_timestamp()}.md"
