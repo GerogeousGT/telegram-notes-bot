@@ -1,0 +1,14 @@
+# Зависимости для Telegram бота-помощника
+# Установка: pip install -r requirements.txt
+
+# Telegram Bot API
+python-telegram-bot==21.7
+
+# HTTP-клиент для AssemblyAI
+httpx>=0.24.0
+
+# Скачивание видео с Instagram/YouTube
+yt-dlp
+
+# Загрузка переменных окружения из .env
+python-dotenv>=1.0.0
