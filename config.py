@@ -1,13 +1,21 @@
 """
-Конфигурация Telegram бота-помощника.
-Все секреты — через переменные окружения (из корневого .env или системных env vars).
+Конфигурация бота. Все секреты — через переменные окружения.
 """
 
 import os
+import sys
 from pathlib import Path
 from dotenv import load_dotenv, find_dotenv
 
 load_dotenv(find_dotenv())
+
+# Валидация обязательных переменных — падаем сразу с понятным сообщением
+_required = ["TELEGRAM_BOT_TOKEN", "ADMIN_ID", "ASSEMBLYAI_KEY"]
+_missing = [k for k in _required if not os.environ.get(k)]
+if _missing:
+    print(f"ОШИБКА: не заданы переменные окружения: {', '.join(_missing)}")
+    print("Скопируй .env.example → .env и заполни значения")
+    sys.exit(1)
 
 TELEGRAM_BOT_TOKEN = os.environ["TELEGRAM_BOT_TOKEN"]
 ADMIN_ID = int(os.environ["ADMIN_ID"])

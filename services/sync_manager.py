@@ -55,7 +55,7 @@ class SyncManager:
             self.messages_count += 1
         elif action_type in ["DOCUMENT", "IMAGE"]:
             self.files_count += 1
-        elif action_type in ["VOICE", "VIDEO"]:
+        elif action_type in ["VOICE", "VIDEO", "VIDEO_NOTE", "AUDIO", "URL_VIDEO"]:
             self.transcripts_count += 1
 
     def mark_as_processed(self, message_id: int):

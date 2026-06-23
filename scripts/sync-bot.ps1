@@ -1,6 +1,7 @@
 # Синхронизация данных с VPS на локальный диск (rclone move)
 $RemoteName = "vps-bot"
-$RemotePath = ($env:VPS_BOT_PATH ?? "/home/deploy/bots/telegram-bot") + "/Распределение"
+$VpsBotPath = if ($env:VPS_BOT_PATH) { $env:VPS_BOT_PATH } else { "/home/deploy/bots/telegram-bot" }
+$RemotePath = "$VpsBotPath/Распределение"
 $LocalPath  = "$PSScriptRoot\Распределение"
 
 Write-Host "== Синхронизация данных бота с VPS ==" -ForegroundColor Cyan

@@ -32,12 +32,6 @@ async def start_transcription(audio_url: str, language_code: str = "ru") -> str:
     """Запускает транскрибацию аудио"""
     transcript_url = f"{ASSEMBLY_BASE_URL}/transcript"
 
-    payload = {
-        "audio_url": audio_url,
-        "speech_models": ["universal-2"],
-        "language_code": language_code
-    }
-
     async with httpx.AsyncClient(timeout=30.0) as client:
         response = await client.post(
             transcript_url,
@@ -45,7 +39,11 @@ async def start_transcription(audio_url: str, language_code: str = "ru") -> str:
                 "authorization": ASSEMBLYAI_KEY,
                 "content-type": "application/json"
             },
-            json=payload
+            json={
+                "audio_url": audio_url,
+                "speech_model": "universal-2",  # fix: было speech_models (list) — неверное поле API
+                "language_code": language_code,
+            }
         )
 
         if response.status_code != 200:
@@ -66,18 +64,24 @@ async def get_transcription_result(transcript_id: str) -> dict:
         return response.json()
 
 
+TRANSCRIPTION_TIMEOUT_SEC = 360  # 6 минут максимум
+
+
 async def wait_for_transcription(transcript_id: str, poll_interval: int = 3) -> str:
-    """Ожидает завершения транскрибации"""
-    while True:
+    """Ожидает завершения транскрибации с таймаутом"""
+    max_attempts = TRANSCRIPTION_TIMEOUT_SEC // poll_interval
+    for _ in range(max_attempts):
         result = await get_transcription_result(transcript_id)
         status = result["status"]
 
         if status == "completed":
             return result["text"]
-        elif status == "error":
+        if status == "error":
             raise Exception(f"Ошибка транскрибации: {result.get('error', 'Unknown error')}")
 
         await asyncio.sleep(poll_interval)
+
+    raise Exception(f"Таймаут транскрибации после {TRANSCRIPTION_TIMEOUT_SEC} секунд")
 
 
 async def transcribe_voice(file_path: str, language: str = "ru") -> str:
