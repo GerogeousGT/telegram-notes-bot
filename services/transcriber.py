@@ -41,7 +41,7 @@ async def start_transcription(audio_url: str, language_code: str = "ru") -> str:
             },
             json={
                 "audio_url": audio_url,
-                "speech_model": "universal-2",  # fix: было speech_models (list) — неверное поле API
+                "speech_models": ["universal-3-pro", "universal-2"],
                 "language_code": language_code,
             }
         )
