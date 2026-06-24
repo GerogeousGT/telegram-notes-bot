@@ -6,6 +6,7 @@ AI-ассистент на базе DeepSeek API (OpenAI-совместимый 
 import asyncio
 import logging
 import os
+import re
 from pathlib import Path
 
 from openai import OpenAI
@@ -131,6 +132,12 @@ TOOLS = [
 MAX_HISTORY = 20
 
 
+def _clean_response(text: str) -> str:
+    """Убирает артефакты вызова функций которые Llama иногда вставляет в текст."""
+    text = re.sub(r'<function=\w+>.*?</function>', '', text, flags=re.DOTALL)
+    return text.strip()
+
+
 class AIAssistant:
     def __init__(self, api_key: str):
         self.client = OpenAI(
@@ -188,7 +195,7 @@ class AIAssistant:
             choice = response.choices[0]
 
             if choice.finish_reason == "stop":
-                return choice.message.content or "..."
+                return _clean_response(choice.message.content or "...")
 
             if choice.finish_reason != "tool_calls":
                 break
