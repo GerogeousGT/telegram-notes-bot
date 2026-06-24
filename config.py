@@ -26,6 +26,7 @@ _BASE_DIR = Path(__file__).resolve().parent
 DISTRIBUTION_FOLDER = os.environ.get("DATA_FOLDER", str(_BASE_DIR / "Распределение"))
 
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
+GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 
 TRANSCRIPTION_LANGUAGE = "ru"
 MAX_FILE_SIZE = 20 * 1024 * 1024
