@@ -3,11 +3,13 @@ import os
 import re
 import shutil
 import tempfile
+from pathlib import Path
 
 from telegram import Update
 from telegram.ext import ContextTypes, MessageHandler, filters, Application
 
 from services.transcriber import transcribe_voice, transcribe_video
+from services.document_reader import extract_text, is_supported
 from handlers.utils import check_admin_access
 
 logger = logging.getLogger(__name__)
@@ -181,33 +183,48 @@ async def document_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     fs = context.application.bot_data["file_saver"]
     sm = context.application.bot_data["sync_manager"]
+    ai = context.application.bot_data.get("ai_assistant")
 
-    await message.reply_text("📄 Получил документ, сохраняю...")
+    filename = message.document.file_name or "document"
+    await message.reply_text(f"📄 Получил `{filename}`, сохраняю...", parse_mode="Markdown")
 
     try:
         doc_file = await message.document.get_file()
-        filename = message.document.file_name or "document"
 
-        with tempfile.NamedTemporaryFile(delete=False) as tmp:
+        with tempfile.NamedTemporaryFile(delete=False, suffix=Path(filename).suffix) as tmp:
             temp_path = tmp.name
         await doc_file.download_to_drive(temp_path)
 
         filepath = fs.save_document(temp_path, filename)
-        os.unlink(temp_path)
 
         sm.log_action("DOCUMENT", f"Сохранён документ {filename} от {user.username or user.id}")
         sm.mark_as_processed(message.message_id)
 
-        reply = f"✅ Документ сохранён:\n`{filepath}`"
-
+        reply = f"✅ Сохранён:\n`{filepath}`"
         if message.caption:
-            caption_path = fs.save_sidecar(filepath, message.caption)
-            reply += f"\n📝 Подпись рядом:\n`{caption_path}`"
+            fs.save_sidecar(filepath, message.caption)
 
         await message.reply_text(reply, parse_mode="Markdown")
+
+        if ai and is_supported(filename):
+            await context.bot.send_chat_action(chat_id=message.chat_id, action="typing")
+            try:
+                text = extract_text(temp_path)
+                if text:
+                    prompt = f"[документ: {filename}]\n\n{text}"
+                    if message.caption:
+                        prompt = f"{message.caption}\n\n[документ: {filename}]\n\n{text}"
+                    response = await ai.process_message(prompt, user.id, fs, sm)
+                    await message.reply_text(response)
+                else:
+                    await message.reply_text("⚠️ Не удалось извлечь текст из документа.")
+            except Exception as e:
+                await message.reply_text(f"⚠️ Документ сохранён, но прочитать не удалось: {e}")
+
+        os.unlink(temp_path)
     except Exception as e:
         logger.error(f"Ошибка сохранения документа: {e}")
-        await message.reply_text(f"❌ Ошибка сохранения: {e}")
+        await message.reply_text(f"❌ Ошибка: {e}")
 
 
 async def photo_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):

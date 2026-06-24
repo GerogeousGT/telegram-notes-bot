@@ -15,3 +15,7 @@ python-dotenv>=1.0.0
 
 # AI-ассистент (DeepSeek через OpenAI-совместимый API)
 openai>=1.0.0
+
+# Чтение документов для AI-анализа
+pymupdf>=1.23.0
+python-docx>=1.1.0
