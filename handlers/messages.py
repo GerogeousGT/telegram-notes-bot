@@ -72,7 +72,7 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     video_url = extract_video_url(message.text)
     if video_url:
-        await _handle_video_url(message, user, video_url, fs, sm)
+        await _handle_video_url(message, user, video_url, fs, sm, ai, context)
         return
 
     if ai:
@@ -324,10 +324,10 @@ async def video_note_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await message.reply_text(f"❌ Ошибка: {e}")
 
 
-async def _handle_video_url(message, user, url: str, fs, sm):
-    """Скачивает видео по ссылке и транскрибирует"""
+async def _handle_video_url(message, user, url: str, fs, sm, ai=None, context=None):
+    """Скачивает видео по ссылке, транскрибирует и отправляет в AI-диалог"""
     await message.reply_text(
-        f"🎬 Обнаружена ссылка на видео, скачиваю...\n`{url[:60]}...`",
+        f"🎬 Скачиваю видео...\n`{url[:60]}...`",
         parse_mode="Markdown"
     )
 
@@ -340,20 +340,27 @@ async def _handle_video_url(message, user, url: str, fs, sm):
             await message.reply_text("❌ Не удалось скачать видео")
             return
 
-        await message.reply_text("📤 Скачано, транскрибирую...")
+        await message.reply_text("📤 Транскрибирую...")
 
         transcript = await transcribe_video(video_path)
-        filepath = fs.save_transcript(transcript, "url")
-        fs.save_link(url, "Video transcript")
 
         sm.log_action("URL_VIDEO", f"Транскрибировано видео по ссылке от {user.username or user.id}")
         sm.mark_as_processed(message.message_id)
 
         short = transcript[:500] + "..." if len(transcript) > 500 else transcript
-        await message.reply_text(
-            f"✅ *Транскрипт видео сохранён:*\n`{filepath}`\n\n📝 *Текст:*\n{short}",
-            parse_mode="Markdown"
-        )
+        await message.reply_text(f"📝 {short}")
+
+        if ai and context:
+            await context.bot.send_chat_action(chat_id=message.chat_id, action="typing")
+            response = await ai.process_message(
+                f"[видео по ссылке {url}, расшифровано]: {transcript}",
+                user.id, fs, sm
+            )
+            await message.reply_text(response)
+        else:
+            filepath = fs.save_transcript(transcript, "url")
+            fs.save_link(url, "Video transcript")
+            await message.reply_text(f"✅ Сохранено:\n`{filepath}`", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Ошибка обработки видео по ссылке: {e}")
         await message.reply_text(f"❌ Ошибка: {e}")
