@@ -8,7 +8,7 @@ import logging
 from telegram import Update
 from telegram.ext import Application
 
-from config import TELEGRAM_BOT_TOKEN, DISTRIBUTION_FOLDER, DEEPSEEK_API_KEY, GEMINI_API_KEY
+from config import TELEGRAM_BOT_TOKEN, DISTRIBUTION_FOLDER, DEEPSEEK_API_KEY, GEMINI_API_KEY, GROQ_API_KEY
 from services.file_saver import FileSaver
 from services.sync_manager import SyncManager
 from services.ai_assistant import AIAssistant
@@ -29,10 +29,10 @@ def main():
     application.bot_data["file_saver"] = FileSaver(DISTRIBUTION_FOLDER)
     application.bot_data["sync_manager"] = SyncManager(DISTRIBUTION_FOLDER)
 
-    ai_key = GEMINI_API_KEY or DEEPSEEK_API_KEY
+    ai_key = GROQ_API_KEY or GEMINI_API_KEY or DEEPSEEK_API_KEY
     if ai_key:
         application.bot_data["ai_assistant"] = AIAssistant(ai_key)
-        provider = "Gemini" if GEMINI_API_KEY else "DeepSeek"
+        provider = "Groq" if GROQ_API_KEY else ("Gemini" if GEMINI_API_KEY else "DeepSeek")
         print(f"🤖 AI-ассистент подключён ({provider})")
     else:
         application.bot_data["ai_assistant"] = None

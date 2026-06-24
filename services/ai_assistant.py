@@ -135,7 +135,7 @@ class AIAssistant:
     def __init__(self, api_key: str):
         self.client = OpenAI(
             api_key=api_key,
-            base_url="https://generativelanguage.googleapis.com/v1beta/openai/"
+            base_url="https://api.groq.com/openai/v1"
         )
         self._histories: dict[int, list] = {}
 
@@ -177,7 +177,7 @@ class AIAssistant:
 
             def _call_api():
                 return self.client.chat.completions.create(
-                    model="gemini-2.0-flash",
+                    model="llama-3.3-70b-versatile",
                     messages=[{"role": "system", "content": SYSTEM_PROMPT}] + msgs_snapshot,
                     tools=TOOLS,
                     tool_choice="auto",
