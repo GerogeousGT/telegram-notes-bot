@@ -68,17 +68,24 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     fs = context.application.bot_data["file_saver"]
     sm = context.application.bot_data["sync_manager"]
+    ai = context.application.bot_data.get("ai_assistant")
 
     video_url = extract_video_url(message.text)
     if video_url:
         await _handle_video_url(message, user, video_url, fs, sm)
         return
 
-    filepath = fs.save_message(message.text, user.username or "unknown", user.id)
-    sm.log_action("TEXT", f"Сохранено сообщение от {user.username or user.id}")
-    sm.mark_as_processed(message.message_id)
-
-    await message.reply_text(f"✅ Сообщение сохранено:\n`{filepath}`", parse_mode="Markdown")
+    if ai:
+        await context.bot.send_chat_action(chat_id=message.chat_id, action="typing")
+        response = await ai.process_message(message.text, user.id, fs, sm)
+        sm.log_action("AI_CHAT", f"AI ответил пользователю {user.username or user.id}")
+        sm.mark_as_processed(message.message_id)
+        await message.reply_text(response)
+    else:
+        filepath = fs.save_message(message.text, user.username or "unknown", user.id)
+        sm.log_action("TEXT", f"Сохранено сообщение от {user.username or user.id}")
+        sm.mark_as_processed(message.message_id)
+        await message.reply_text(f"✅ Сообщение сохранено:\n`{filepath}`", parse_mode="Markdown")
 
 
 async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -89,8 +96,9 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     fs = context.application.bot_data["file_saver"]
     sm = context.application.bot_data["sync_manager"]
+    ai = context.application.bot_data.get("ai_assistant")
 
-    await message.reply_text("🎤 Получил голосовое, транскрибирую...")
+    await message.reply_text("🎤 Транскрибирую...")
 
     try:
         voice_file = await message.voice.get_file()
@@ -99,17 +107,24 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await voice_file.download_to_drive(temp_path)
 
         transcript = await transcribe_voice(temp_path)
-        filepath = fs.save_transcript(transcript, "voice")
         os.unlink(temp_path)
 
         sm.log_action("VOICE", f"Транскрибировано голосовое от {user.username or user.id}")
         sm.mark_as_processed(message.message_id)
 
         short = transcript[:500] + "..." if len(transcript) > 500 else transcript
-        await message.reply_text(
-            f"✅ *Транскрипт сохранён:*\n`{filepath}`\n\n📝 *Текст:*\n{short}",
-            parse_mode="Markdown"
-        )
+        await message.reply_text(f"📝 {short}")
+
+        if ai:
+            await context.bot.send_chat_action(chat_id=message.chat_id, action="typing")
+            response = await ai.process_message(
+                f"[голосовое сообщение, расшифровано]: {transcript}",
+                user.id, fs, sm
+            )
+            await message.reply_text(response)
+        else:
+            filepath = fs.save_transcript(transcript, "voice")
+            await message.reply_text(f"✅ Сохранено:\n`{filepath}`", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Ошибка транскрибации голосового: {e}")
         await message.reply_text(f"❌ Ошибка транскрибации: {e}")
@@ -124,8 +139,9 @@ async def audio_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
     user = update.effective_user
     fs = context.application.bot_data["file_saver"]
     sm = context.application.bot_data["sync_manager"]
+    ai = context.application.bot_data.get("ai_assistant")
 
-    await message.reply_text("🎵 Получил аудио, транскрибирую...")
+    await message.reply_text("🎵 Транскрибирую...")
 
     try:
         audio_file = await message.audio.get_file()
@@ -134,17 +150,24 @@ async def audio_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await audio_file.download_to_drive(temp_path)
 
         transcript = await transcribe_voice(temp_path)
-        filepath = fs.save_transcript(transcript, "audio")
         os.unlink(temp_path)
 
         sm.log_action("AUDIO", f"Транскрибовано аудио от {user.username or user.id}")
         sm.mark_as_processed(message.message_id)
 
         short = transcript[:500] + "..." if len(transcript) > 500 else transcript
-        await message.reply_text(
-            f"✅ *Транскрипт аудио сохранён:*\n`{filepath}`\n\n📝 *Текст:*\n{short}",
-            parse_mode="Markdown"
-        )
+        await message.reply_text(f"📝 {short}")
+
+        if ai:
+            await context.bot.send_chat_action(chat_id=message.chat_id, action="typing")
+            response = await ai.process_message(
+                f"[аудио, расшифровано]: {transcript}",
+                user.id, fs, sm
+            )
+            await message.reply_text(response)
+        else:
+            filepath = fs.save_transcript(transcript, "audio")
+            await message.reply_text(f"✅ Сохранено:\n`{filepath}`", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Ошибка транскрибации аудио: {e}")
         await message.reply_text(f"❌ Ошибка: {e}")
@@ -267,8 +290,9 @@ async def video_note_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
     user = update.effective_user
     fs = context.application.bot_data["file_saver"]
     sm = context.application.bot_data["sync_manager"]
+    ai = context.application.bot_data.get("ai_assistant")
 
-    await message.reply_text("🎬 Получил видео-заметку, транскрибирую...")
+    await message.reply_text("🎬 Транскрибирую...")
 
     try:
         vn_file = await message.video_note.get_file()
@@ -277,17 +301,24 @@ async def video_note_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
         await vn_file.download_to_drive(temp_path)
 
         transcript = await transcribe_video(temp_path)
-        filepath = fs.save_transcript(transcript, "video_note")
         os.unlink(temp_path)
 
         sm.log_action("VIDEO_NOTE", f"Транскрибована видео-заметка от {user.username or user.id}")
         sm.mark_as_processed(message.message_id)
 
         short = transcript[:500] + "..." if len(transcript) > 500 else transcript
-        await message.reply_text(
-            f"✅ *Транскрипт видео-заметки сохранён:*\n`{filepath}`\n\n📝 *Текст:*\n{short}",
-            parse_mode="Markdown"
-        )
+        await message.reply_text(f"📝 {short}")
+
+        if ai:
+            await context.bot.send_chat_action(chat_id=message.chat_id, action="typing")
+            response = await ai.process_message(
+                f"[видео-заметка, расшифрована]: {transcript}",
+                user.id, fs, sm
+            )
+            await message.reply_text(response)
+        else:
+            filepath = fs.save_transcript(transcript, "video_note")
+            await message.reply_text(f"✅ Сохранено:\n`{filepath}`", parse_mode="Markdown")
     except Exception as e:
         logger.error(f"Ошибка транскрибации видео-заметки: {e}")
         await message.reply_text(f"❌ Ошибка: {e}")

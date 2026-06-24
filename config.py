@@ -11,6 +11,7 @@ load_dotenv(find_dotenv())
 
 # Валидация обязательных переменных — падаем сразу с понятным сообщением
 _required = ["TELEGRAM_BOT_TOKEN", "ADMIN_ID", "ASSEMBLYAI_KEY"]
+# DEEPSEEK_API_KEY опциональный — без него AI-режим отключён, бот работает как раньше
 _missing = [k for k in _required if not os.environ.get(k)]
 if _missing:
     print(f"ОШИБКА: не заданы переменные окружения: {', '.join(_missing)}")
@@ -23,6 +24,8 @@ ASSEMBLYAI_KEY = os.environ["ASSEMBLYAI_KEY"]
 
 _BASE_DIR = Path(__file__).resolve().parent
 DISTRIBUTION_FOLDER = os.environ.get("DATA_FOLDER", str(_BASE_DIR / "Распределение"))
+
+DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 
 TRANSCRIPTION_LANGUAGE = "ru"
 MAX_FILE_SIZE = 20 * 1024 * 1024

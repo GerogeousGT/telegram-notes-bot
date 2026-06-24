@@ -12,3 +12,6 @@ yt-dlp
 
 # Загрузка переменных окружения из .env
 python-dotenv>=1.0.0
+
+# AI-ассистент (DeepSeek через OpenAI-совместимый API)
+openai>=1.0.0

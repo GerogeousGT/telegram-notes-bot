@@ -9,22 +9,31 @@ async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_admin_access(update):
         return
 
-    await update.message.reply_text("""
-🤖 *Привет! Я твой бот-помощник.*
+    ai = context.application.bot_data.get("ai_assistant")
+    ai_status = "✅ подключён" if ai else "❌ не подключён (нет DEEPSEEK\\_API\\_KEY)"
+
+    await update.message.reply_text(f"""
+🤖 *Привет! Я твой AI-ассистент.*
+
+🧠 *AI-режим:* {ai_status}
 
 Я умею:
-• Сохранять текстовые сообщения
+• Отвечать на вопросы и вести диалог
+• Сохранять заметки по команде ("сохрани это", "запомни")
+• Искать по заметкам ("найди про X")
+• Создавать категории ("создай категорию рецепты")
 • Транскрибировать голосовые, аудио, видео и круглые видео
-• Сохранять документы и изображения (вместе с подписью)
-• Скачивать и транскрибировать видео по ссылкам (Instagram, YouTube, TikTok)
-• Вести логи работы
+• Анализировать транскрипты и выделять ключевые пункты
+• Сохранять документы и изображения
+• Скачивать и транскрибировать видео (Instagram, YouTube, TikTok)
 
 📋 *Команды:*
-/help - справка
-/status - статус бота
-/sync - статистика синхронизации
-/log - последние записи логов
-/list - последние сохранённые файлы
+/help — справка
+/clear — сбросить историю диалога с AI
+/status — статус бота
+/sync — статистика
+/log — последние логи
+/list — последние файлы
 """, parse_mode="Markdown")
 
     context.application.bot_data["sync_manager"].log_action(
@@ -39,18 +48,25 @@ async def help_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("""
 📋 *Справка по боту*
 
-*Что принимает бот:*
-• Текст → Распределение/сообщения/
-• Голосовые / аудио → транскрибирует → Распределение/транскрипты/
-• Видео / круглые видео → транскрибирует → Распределение/транскрипты/
+*AI-режим (текстовые сообщения):*
+• Просто пиши — AI отвечает в диалоге
+• "Сохрани это в заметки" — AI сохранит
+• "Сохрани в категорию рецепты: [текст]" — сохранит в нужную папку
+• "Найди про встречу" — поищет по заметкам
+• "Создай категорию идеи" — создаст новую папку
+
+*Медиа:*
+• Голосовые / аудио / видео / круглые — транскрибирует, сохраняет и анализирует
 • Документы → Распределение/документы/
 • Изображения → Распределение/изображения/
-• Ссылки на видео (YouTube, Instagram, TikTok) → скачивает и транскрибирует
-
-*Подписи* к фото/документам сохраняются отдельно как текст.
+• Ссылки на видео (YouTube, Instagram, TikTok) → транскрибирует
 
 *Команды:*
-/start /help /status /sync /log /list
+/clear — сбросить историю диалога с AI
+/status — статус и путь к данным
+/sync — статистика обработанных сообщений
+/log — последние 10 записей лога
+/list — последние 10 сохранённых файлов
 """, parse_mode="Markdown")
 
 
@@ -100,9 +116,22 @@ async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode="Markdown")
 
 
+async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_admin_access(update):
+        return
+
+    ai = context.application.bot_data.get("ai_assistant")
+    if ai:
+        ai.clear_history(update.effective_user.id)
+        await update.message.reply_text("🧹 История диалога с AI сброшена.")
+    else:
+        await update.message.reply_text("AI-ассистент не подключён.")
+
+
 def register(application: Application):
     application.add_handler(CommandHandler("start", start_command))
     application.add_handler(CommandHandler("help", help_command))
+    application.add_handler(CommandHandler("clear", clear_command))
     application.add_handler(CommandHandler("status", status_command))
     application.add_handler(CommandHandler("sync", sync_command))
     application.add_handler(CommandHandler("log", log_command))

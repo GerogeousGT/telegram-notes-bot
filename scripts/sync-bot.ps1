@@ -1,4 +1,4 @@
-# Синхронизация данных с VPS на локальный диск (rclone move)
+# Синхронизация данных с VPS на локальный диск (rclone copy — файлы на сервере сохраняются для AI-поиска)
 $RemoteName = "vps-bot"
 $VpsBotPath = if ($env:VPS_BOT_PATH) { $env:VPS_BOT_PATH } else { "/home/deploy/bots/telegram-bot" }
 $RemotePath = "$VpsBotPath/Распределение"
@@ -11,13 +11,13 @@ if (-not (Test-Path $LocalPath)) {
 }
 
 try {
-    Write-Host "Перенос файлов с VPS на локальный диск..." -ForegroundColor Yellow
+    Write-Host "Копирование файлов с VPS на локальный диск..." -ForegroundColor Yellow
     $remoteSpec = "${RemoteName}:${RemotePath}"
-    & rclone move $remoteSpec "$LocalPath" --checksum
+    & rclone copy $remoteSpec "$LocalPath" --checksum
     if ($LASTEXITCODE -eq 0) {
-        Write-Host "Готово: данные бота перенесены на ПК, с VPS удалены." -ForegroundColor Green
+        Write-Host "Готово: данные скопированы на ПК. Файлы на VPS сохранены (нужны для AI-поиска)." -ForegroundColor Green
     } else {
-        Write-Host "Ошибка при выполнении rclone move (код $LASTEXITCODE)." -ForegroundColor Red
+        Write-Host "Ошибка при выполнении rclone copy (код $LASTEXITCODE)." -ForegroundColor Red
     }
 } catch {
     Write-Host "Ошибка: rclone не найден или VPS недоступен." -ForegroundColor Red

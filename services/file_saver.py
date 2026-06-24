@@ -122,6 +122,49 @@ class FileSaver:
 
         return self.save_to_file("ссылки", filename, content)
 
+    def save_to_category(self, content: str, category: str) -> str:
+        """Сохраняет текст в указанную категорию. Создаёт папку если нет."""
+        category = category.strip().lower()
+        folder_path = self.base_folder / category
+        folder_path.mkdir(parents=True, exist_ok=True)
+
+        filename = f"{self.get_timestamp()}.md"
+        content_md = f"""# Заметка
+
+**Дата:** {__import__('datetime').datetime.now().strftime("%Y-%m-%d %H:%M:%S")}
+**Категория:** {category}
+
+---
+
+{content}
+
+---
+"""
+        filepath = folder_path / filename
+        filepath.write_text(content_md, encoding="utf-8")
+        return str(filepath)
+
+    def create_category(self, name: str, description: str = "") -> str:
+        """Создаёт новую папку-категорию."""
+        name = name.strip().lower()
+        folder_path = self.base_folder / name
+        if folder_path.exists():
+            return f"Категория '{name}' уже существует"
+        folder_path.mkdir(parents=True, exist_ok=True)
+
+        if description:
+            readme = folder_path / "README.md"
+            readme.write_text(f"# {name}\n\n{description}\n", encoding="utf-8")
+
+        return f"Категория '{name}' создана"
+
+    def list_categories(self) -> list[str]:
+        """Возвращает список папок-категорий."""
+        return [
+            p.name for p in sorted(self.base_folder.iterdir())
+            if p.is_dir()
+        ]
+
     def get_recent_files(self, limit: int = 10) -> list:
         """Возвращает список последних сохранённых файлов"""
         all_files = []
