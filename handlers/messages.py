@@ -347,6 +347,9 @@ async def _handle_video_url(message, user, url: str, fs, sm, ai=None, context=No
         sm.log_action("URL_VIDEO", f"Транскрибировано видео по ссылке от {user.username or user.id}")
         sm.mark_as_processed(message.message_id)
 
+        with open(video_path, "rb") as vf:
+            await message.reply_video(vf)
+
         short = transcript[:500] + "..." if len(transcript) > 500 else transcript
         await message.reply_text(f"📝 {short}")
 
