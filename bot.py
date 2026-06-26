@@ -8,7 +8,7 @@ import logging
 from telegram import Update
 from telegram.ext import Application
 
-from config import TELEGRAM_BOT_TOKEN, DISTRIBUTION_FOLDER, DEEPSEEK_API_KEY, GEMINI_API_KEY, GROQ_API_KEY
+from config import TELEGRAM_BOT_TOKEN, DISTRIBUTION_FOLDER, DEEPSEEK_API_KEY, GEMINI_API_KEY, GROQ_API_KEY, YANDEX_API_KEY, YANDEX_FOLDER_ID
 from services.file_saver import FileSaver
 from services.sync_manager import SyncManager
 from services.ai_assistant import AIAssistant
@@ -29,11 +29,19 @@ def main():
     application.bot_data["file_saver"] = FileSaver(DISTRIBUTION_FOLDER)
     application.bot_data["sync_manager"] = SyncManager(DISTRIBUTION_FOLDER)
 
-    ai_key = GROQ_API_KEY or GEMINI_API_KEY or DEEPSEEK_API_KEY
-    if ai_key:
-        application.bot_data["ai_assistant"] = AIAssistant(ai_key)
-        provider = "Groq" if GROQ_API_KEY else ("Gemini" if GEMINI_API_KEY else "DeepSeek")
-        print(f"🤖 AI-ассистент подключён ({provider})")
+    has_ai = GROQ_API_KEY or GEMINI_API_KEY or DEEPSEEK_API_KEY or YANDEX_API_KEY
+    if has_ai:
+        application.bot_data["ai_assistant"] = AIAssistant(
+            groq_api_key=GROQ_API_KEY,
+            yandex_api_key=YANDEX_API_KEY,
+            yandex_folder_id=YANDEX_FOLDER_ID,
+        )
+        providers = []
+        if GROQ_API_KEY:
+            providers.append("Groq")
+        if YANDEX_API_KEY and YANDEX_FOLDER_ID:
+            providers.append("Yandex")
+        print(f"🤖 AI-ассистент подключён ({', '.join(providers)})")
     else:
         application.bot_data["ai_assistant"] = None
         print("⚠️  AI ключ не задан — бот работает в режиме сохранения")

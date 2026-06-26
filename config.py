@@ -28,6 +28,8 @@ DISTRIBUTION_FOLDER = os.environ.get("DATA_FOLDER", str(_BASE_DIR / "Распр�
 DEEPSEEK_API_KEY = os.environ.get("DEEPSEEK_API_KEY")
 GEMINI_API_KEY = os.environ.get("GEMINI_API_KEY")
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY")
+YANDEX_API_KEY = os.environ.get("YANDEX_API_KEY")
+YANDEX_FOLDER_ID = os.environ.get("YANDEX_FOLDER_ID")
 
 TRANSCRIPTION_LANGUAGE = "ru"
 MAX_FILE_SIZE = 20 * 1024 * 1024

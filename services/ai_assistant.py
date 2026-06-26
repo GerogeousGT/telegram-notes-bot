@@ -1,17 +1,29 @@
 """
-AI-ассистент на базе DeepSeek API (OpenAI-совместимый формат).
+AI-ассистент с поддержкой нескольких провайдеров: Groq и YandexGPT.
 Поддерживает function calling: сохранение заметок, поиск, управление категориями.
 """
 
 import asyncio
 import logging
-import os
 import re
 from pathlib import Path
 
 from openai import OpenAI
 
 logger = logging.getLogger(__name__)
+
+PROVIDERS = {
+    "groq": {
+        "label": "Groq (Llama 3.3)",
+        "model": "llama-3.3-70b-versatile",
+        "base_url": "https://api.groq.com/openai/v1",
+    },
+    "yandex": {
+        "label": "YandexGPT Lite",
+        "model": None,  # формируется динамически через folder_id
+        "base_url": "https://ai.api.cloud.yandex.net/v1",
+    },
+}
 
 _DEFAULT_SYSTEM_PROMPT = """Ты личный AI-ассистент. Работаешь через Telegram.
 
@@ -139,12 +151,51 @@ def _clean_response(text: str) -> str:
 
 
 class AIAssistant:
-    def __init__(self, api_key: str):
-        self.client = OpenAI(
-            api_key=api_key,
-            base_url="https://api.groq.com/openai/v1"
-        )
+    def __init__(self, groq_api_key: str | None = None, yandex_api_key: str | None = None, yandex_folder_id: str | None = None):
+        self._groq_api_key = groq_api_key
+        self._yandex_api_key = yandex_api_key
+        self._yandex_folder_id = yandex_folder_id
         self._histories: dict[int, list] = {}
+        self._user_provider: dict[int, str] = {}  # per-user выбор провайдера
+
+    def set_provider(self, user_id: int, provider: str):
+        """Переключить провайдера для конкретного пользователя."""
+        if provider not in PROVIDERS:
+            raise ValueError(f"Неизвестный провайдер: {provider}")
+        self._user_provider[user_id] = provider
+
+    def get_provider(self, user_id: int) -> str:
+        return self._user_provider.get(user_id, "groq")
+
+    def get_provider_label(self, user_id: int) -> str:
+        return PROVIDERS[self.get_provider(user_id)]["label"]
+
+    def available_providers(self) -> list[str]:
+        """Список провайдеров, для которых есть ключи."""
+        result = []
+        if self._groq_api_key:
+            result.append("groq")
+        if self._yandex_api_key and self._yandex_folder_id:
+            result.append("yandex")
+        return result
+
+    def _make_client(self, provider: str) -> tuple[OpenAI, str]:
+        """Создать клиент и вернуть (client, model_name)."""
+        if provider == "groq":
+            client = OpenAI(
+                api_key=self._groq_api_key,
+                base_url=PROVIDERS["groq"]["base_url"],
+            )
+            return client, PROVIDERS["groq"]["model"]
+        if provider == "yandex":
+            client = OpenAI(
+                api_key=self._yandex_api_key,
+                base_url=PROVIDERS["yandex"]["base_url"],
+                project=self._yandex_folder_id,
+            )
+            model = f"gpt://{self._yandex_folder_id}/yandexgpt-lite/latest"
+            return client, model
+        raise ValueError(f"Неизвестный провайдер: {provider}")
 
     def get_history(self, user_id: int) -> list:
         return self._histories.setdefault(user_id, [])
@@ -160,6 +211,7 @@ class AIAssistant:
             self._histories[user_id] = history[-MAX_HISTORY:]
 
     async def process_message(self, text: str, user_id: int, file_saver, sync_manager) -> str:
+        provider = self.get_provider(user_id)
         history = self.get_history(user_id)
         history.append({"role": "user", "content": text})
 
@@ -168,7 +220,7 @@ class AIAssistant:
             self._histories[user_id] = history
 
         try:
-            response_text = await self._run_tool_loop(list(history), file_saver, sync_manager)
+            response_text = await self._run_tool_loop(list(history), file_saver, sync_manager, provider)
         except Exception as e:
             logger.error(f"AI error: {e}")
             return f"❌ Ошибка AI: {e}"
@@ -176,15 +228,16 @@ class AIAssistant:
         history.append({"role": "assistant", "content": response_text})
         return response_text
 
-    async def _run_tool_loop(self, messages: list, file_saver, sync_manager) -> str:
+    async def _run_tool_loop(self, messages: list, file_saver, sync_manager, provider: str) -> str:
         loop = asyncio.get_running_loop()
+        client, model = self._make_client(provider)
 
         while True:
             msgs_snapshot = list(messages)
 
             def _call_api():
-                return self.client.chat.completions.create(
-                    model="llama-3.3-70b-versatile",
+                return client.chat.completions.create(
+                    model=model,
                     messages=[{"role": "system", "content": SYSTEM_PROMPT}] + msgs_snapshot,
                     tools=TOOLS,
                     tool_choice="auto",

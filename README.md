@@ -2,11 +2,11 @@
 
 ![Python](https://img.shields.io/badge/Python-3.10+-blue?logo=python&logoColor=white)
 ![Telegram](https://img.shields.io/badge/Telegram-Bot-blue?logo=telegram)
-![DeepSeek](https://img.shields.io/badge/AI-DeepSeek-orange)
+![Groq](https://img.shields.io/badge/AI-Groq%20%2F%20Yandex-orange)
 ![AssemblyAI](https://img.shields.io/badge/STT-AssemblyAI-purple)
 ![License](https://img.shields.io/badge/license-MIT-green)
 
-Личный AI-ассистент в Telegram. Ведёт диалог, транскрибирует голосовые и видео, сохраняет заметки по команде, ищет по ним и управляет категориями — всё через естественный язык.
+Личный AI-ассистент в Telegram. Ведёт диалог, транскрибирует голосовые и видео, сохраняет заметки по команде, ищет по ним и управляет категориями — всё через естественный язык. Поддерживает переключение между AI-моделями прямо из чата.
 
 ## Проблема
 
@@ -45,7 +45,8 @@
 ## Стек
 
 - **Python 3.10+** + `python-telegram-bot 21`
-- **DeepSeek API** (OpenAI-совместимый) — AI-диалог и function calling
+- **Groq API** (Llama 3.3 70b) — AI-диалог и function calling, модель по умолчанию
+- **Yandex AI Studio** (YandexGPT Lite) — альтернативная модель, переключается командой `/model`
 - **AssemblyAI** — транскрибация речи
 - **yt-dlp** — скачивание видео по ссылкам
 - **VPS** (Ubuntu) + **systemd** — деплой и автозапуск
@@ -57,11 +58,11 @@ telegram-notes-bot/
 ├── bot.py                  — точка входа
 ├── config.py               — конфигурация из .env
 ├── handlers/
-│   ├── commands.py         — /start /help /clear /status /sync /log /list
+│   ├── commands.py         — /start /help /clear /status /sync /log /list /model
 │   ├── messages.py         — обработка всех типов сообщений
 │   └── utils.py            — проверка доступа
 ├── services/
-│   ├── ai_assistant.py     — DeepSeek клиент, история диалога, function calling
+│   ├── ai_assistant.py     — мульти-провайдер AI (Groq / Yandex), history, function calling
 │   ├── file_saver.py       — сохранение файлов, управление категориями
 │   ├── transcriber.py      — транскрибация через AssemblyAI
 │   └── sync_manager.py     — логи и статистика
@@ -88,6 +89,9 @@ python bot.py
 | `TELEGRAM_BOT_TOKEN` | да | Токен от @BotFather |
 | `ADMIN_ID` | да | Telegram User ID (только ты получаешь доступ) |
 | `ASSEMBLYAI_KEY` | да | [assemblyai.com](https://www.assemblyai.com) |
+| `GROQ_API_KEY` | нет | [console.groq.com](https://console.groq.com) — модель по умолчанию (Llama 3.3) |
+| `YANDEX_API_KEY` | нет | Создать в [aistudio.yandex.ru](https://aistudio.yandex.ru) |
+| `YANDEX_FOLDER_ID` | нет | ID каталога в Яндекс Cloud Console (нужен вместе с `YANDEX_API_KEY`) |
 | `DEEPSEEK_API_KEY` | нет | [platform.deepseek.com](https://platform.deepseek.com) — бесплатный tier |
 | `DATA_FOLDER` | нет | Путь к папке с данными (по умолчанию `./Распределение`) |
 
@@ -102,15 +106,27 @@ python bot.py
 | `/sync` | Статистика обработанных сообщений |
 | `/log` | Последние 10 записей лога |
 | `/list` | Последние 10 сохранённых файлов |
+| `/model` | Переключить AI-модель (Groq / YandexGPT) |
 
 ## Деплой на VPS
 
 ```powershell
-# Перезапустить бота
-.\scripts\restart-bot.ps1
+# Скопировать изменённые файлы на VPS
+scp config.py vps:/home/deploy/bots/telegram-bot/
+scp services/ai_assistant.py vps:/home/deploy/bots/telegram-bot/services/
+scp handlers/commands.py vps:/home/deploy/bots/telegram-bot/handlers/
+scp bot.py vps:/home/deploy/bots/telegram-bot/
+
+# Перезапустить бота (только через systemctl — не руками!)
+ssh vps "systemctl restart telegram-bot"
+
+# Проверить статус
+ssh vps "systemctl status telegram-bot"
 
 # Скопировать данные с VPS на локальный диск (файлы на сервере сохраняются)
 .\scripts\sync-bot.ps1
 ```
 
-Бот работает через systemd с `Restart=always` — поднимается автоматически после перезагрузки сервера.
+Бот управляется через systemd-сервис `telegram-bot.service` с `Restart=always`.
+
+> **Важно:** никогда не запускать бота руками через `nohup python3 bot.py &` — systemd уже держит процесс, ручной старт создаёт дубль и вызывает Telegram Conflict. Единственная команда перезапуска: `systemctl restart telegram-bot`.

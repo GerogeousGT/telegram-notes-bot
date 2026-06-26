@@ -1,3 +1,18 @@
+## [2026-06-26] — Переключение моделей: Groq + YandexGPT
+
+### Добавлено
+- `PROVIDERS` в `ai_assistant.py` — реестр провайдеров (Groq, Yandex)
+- Per-user выбор провайдера: `set_provider()`, `get_provider()`, `available_providers()`
+- `/model` команда с inline-кнопками для переключения между моделями
+- `YANDEX_API_KEY`, `YANDEX_FOLDER_ID` в `config.py` и `.env.example`
+
+### Изменено
+- `AIAssistant.__init__` принимает раздельные ключи вместо одного `api_key`
+- `bot.py` передаёт ключи Groq и Yandex в конструктор
+- `_run_tool_loop` берёт клиент и модель из провайдера, выбранного пользователем
+
+---
+
 ## [2026-06-24] — Чтение PDF и DOCX через AI
 
 ### Добавлено

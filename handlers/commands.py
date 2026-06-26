@@ -1,8 +1,9 @@
-from telegram import Update
-from telegram.ext import ContextTypes, CommandHandler, Application
+from telegram import Update, InlineKeyboardButton, InlineKeyboardMarkup
+from telegram.ext import ContextTypes, CommandHandler, CallbackQueryHandler, Application
 
 from config import DISTRIBUTION_FOLDER, ADMIN_ID
 from handlers.utils import check_admin_access
+from services.ai_assistant import PROVIDERS
 
 
 async def start_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -116,6 +117,64 @@ async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode="Markdown")
 
 
+async def model_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_admin_access(update):
+        return
+
+    ai = context.application.bot_data.get("ai_assistant")
+    if not ai:
+        await update.message.reply_text("AI-ассистент не подключён.")
+        return
+
+    available = ai.available_providers()
+    current = ai.get_provider(update.effective_user.id)
+
+    buttons = []
+    for provider_id in available:
+        label = PROVIDERS[provider_id]["label"]
+        mark = "✅ " if provider_id == current else ""
+        buttons.append([InlineKeyboardButton(f"{mark}{label}", callback_data=f"model:{provider_id}")])
+
+    await update.message.reply_text(
+        f"🤖 *Выбор модели*\n\nТекущая: *{PROVIDERS[current]['label']}*\n\nВыбери модель:",
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown",
+    )
+
+
+async def model_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    query = update.callback_query
+    await query.answer()
+
+    if not query.data.startswith("model:"):
+        return
+
+    provider_id = query.data.split(":", 1)[1]
+    ai = context.application.bot_data.get("ai_assistant")
+    if not ai:
+        return
+
+    available = ai.available_providers()
+    if provider_id not in available:
+        await query.edit_message_text("❌ Провайдер недоступен — проверь API-ключи в .env")
+        return
+
+    ai.set_provider(query.from_user.id, provider_id)
+    label = PROVIDERS[provider_id]["label"]
+
+    buttons = []
+    for pid in available:
+        lbl = PROVIDERS[pid]["label"]
+        mark = "✅ " if pid == provider_id else ""
+        buttons.append([InlineKeyboardButton(f"{mark}{lbl}", callback_data=f"model:{pid}")])
+
+    await query.edit_message_text(
+        f"🤖 *Выбор модели*\n\nТекущая: *{label}*\n\nВыбери модель:",
+        reply_markup=InlineKeyboardMarkup(buttons),
+        parse_mode="Markdown",
+    )
+
+
 async def clear_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_admin_access(update):
         return
@@ -136,3 +195,5 @@ def register(application: Application):
     application.add_handler(CommandHandler("sync", sync_command))
     application.add_handler(CommandHandler("log", log_command))
     application.add_handler(CommandHandler("list", list_command))
+    application.add_handler(CommandHandler("model", model_command))
+    application.add_handler(CallbackQueryHandler(model_callback, pattern="^model:"))
