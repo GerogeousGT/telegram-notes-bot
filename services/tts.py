@@ -32,7 +32,7 @@ class TTSService:
                     data={
                         "text": text,
                         "lang": "ru-RU",
-                        "voice": "masha",
+                        "voice": "jane",
                         "format": "oggopus",
                         "folderId": self._folder_id,
                         "speed": "1.0",
