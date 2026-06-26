@@ -117,6 +117,30 @@ async def list_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(message, parse_mode="Markdown")
 
 
+async def voice_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    if not await check_admin_access(update):
+        return
+
+    ai = context.application.bot_data.get("ai_assistant")
+    tts = context.application.bot_data.get("tts_service")
+
+    if not ai:
+        await update.message.reply_text("AI-ассистент не подключён.")
+        return
+    if not tts:
+        await update.message.reply_text("❌ TTS недоступен — проверь YANDEX\\_API\\_KEY и YANDEX\\_FOLDER\\_ID в .env", parse_mode="Markdown")
+        return
+
+    current = ai.get_voice(update.effective_user.id)
+    new_state = not current
+    ai.set_voice(update.effective_user.id, new_state)
+
+    if new_state:
+        await update.message.reply_text("🔊 Голосовой режим *включён* — буду отвечать голосом.", parse_mode="Markdown")
+    else:
+        await update.message.reply_text("🔇 Голосовой режим *выключен*.", parse_mode="Markdown")
+
+
 async def model_command(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if not await check_admin_access(update):
         return
@@ -195,5 +219,6 @@ def register(application: Application):
     application.add_handler(CommandHandler("sync", sync_command))
     application.add_handler(CommandHandler("log", log_command))
     application.add_handler(CommandHandler("list", list_command))
+    application.add_handler(CommandHandler("voice", voice_command))
     application.add_handler(CommandHandler("model", model_command))
     application.add_handler(CallbackQueryHandler(model_callback, pattern="^model:"))

@@ -12,6 +12,7 @@ from config import TELEGRAM_BOT_TOKEN, DISTRIBUTION_FOLDER, DEEPSEEK_API_KEY, GE
 from services.file_saver import FileSaver
 from services.sync_manager import SyncManager
 from services.ai_assistant import AIAssistant
+from services.tts import TTSService
 import handlers.commands as commands
 import handlers.messages as messages
 
@@ -45,6 +46,13 @@ def main():
     else:
         application.bot_data["ai_assistant"] = None
         print("⚠️  AI ключ не задан — бот работает в режиме сохранения")
+
+    if YANDEX_API_KEY and YANDEX_FOLDER_ID:
+        application.bot_data["tts_service"] = TTSService(YANDEX_API_KEY, YANDEX_FOLDER_ID)
+        print("🔊 TTS (Yandex SpeechKit) подключён")
+    else:
+        application.bot_data["tts_service"] = None
+        print("⚠️  TTS недоступен — нет YANDEX_API_KEY / YANDEX_FOLDER_ID")
 
     commands.register(application)
     messages.register(application)

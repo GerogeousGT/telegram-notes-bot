@@ -157,6 +157,7 @@ class AIAssistant:
         self._yandex_folder_id = yandex_folder_id
         self._histories: dict[int, list] = {}
         self._user_provider: dict[int, str] = {}  # per-user выбор провайдера
+        self._user_voice: dict[int, bool] = {}    # per-user голосовой режим
 
     def set_provider(self, user_id: int, provider: str):
         """Переключить провайдера для конкретного пользователя."""
@@ -169,6 +170,12 @@ class AIAssistant:
 
     def get_provider_label(self, user_id: int) -> str:
         return PROVIDERS[self.get_provider(user_id)]["label"]
+
+    def set_voice(self, user_id: int, enabled: bool):
+        self._user_voice[user_id] = enabled
+
+    def get_voice(self, user_id: int) -> bool:
+        return self._user_voice.get(user_id, False)
 
     def available_providers(self) -> list[str]:
         """Список провайдеров, для которых есть ключи."""
