@@ -131,6 +131,13 @@ async def voice_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"[голосовое сообщение, расшифровано]: {transcript}",
                 user.id, fs, sm
             )
+            if ai.get_voice(user.id):
+                tts = context.application.bot_data.get("tts_service")
+                if tts:
+                    audio = await tts.synthesize(response)
+                    if audio:
+                        await message.reply_voice(io.BytesIO(audio))
+                        return
             await message.reply_text(response)
         else:
             filepath = fs.save_transcript(transcript, "voice")
@@ -174,6 +181,13 @@ async def audio_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 f"[аудио, расшифровано]: {transcript}",
                 user.id, fs, sm
             )
+            if ai.get_voice(user.id):
+                tts = context.application.bot_data.get("tts_service")
+                if tts:
+                    audio = await tts.synthesize(response)
+                    if audio:
+                        await message.reply_voice(io.BytesIO(audio))
+                        return
             await message.reply_text(response)
         else:
             filepath = fs.save_transcript(transcript, "audio")
@@ -340,6 +354,13 @@ async def video_note_handler(update: Update, context: ContextTypes.DEFAULT_TYPE)
                 f"[видео-заметка, расшифрована]: {transcript}",
                 user.id, fs, sm
             )
+            if ai.get_voice(user.id):
+                tts = context.application.bot_data.get("tts_service")
+                if tts:
+                    audio = await tts.synthesize(response)
+                    if audio:
+                        await message.reply_voice(io.BytesIO(audio))
+                        return
             await message.reply_text(response)
         else:
             filepath = fs.save_transcript(transcript, "video_note")
