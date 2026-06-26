@@ -83,13 +83,14 @@ async def text_handler(update: Update, context: ContextTypes.DEFAULT_TYPE):
         response = await ai.process_message(message.text, user.id, fs, sm)
         sm.log_action("AI_CHAT", f"AI ответил пользователю {user.username or user.id}")
         sm.mark_as_processed(message.message_id)
-        await message.reply_text(response)
         if ai.get_voice(user.id):
             tts = context.application.bot_data.get("tts_service")
             if tts:
                 audio = await tts.synthesize(response)
                 if audio:
                     await message.reply_voice(io.BytesIO(audio))
+                    return
+        await message.reply_text(response)
     else:
         filepath = fs.save_message(message.text, user.username or "unknown", user.id)
         sm.log_action("TEXT", f"Сохранено сообщение от {user.username or user.id}")

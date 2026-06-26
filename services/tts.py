@@ -32,10 +32,10 @@ class TTSService:
                     data={
                         "text": text,
                         "lang": "ru-RU",
-                        "voice": "alena",
+                        "voice": "masha",
                         "format": "oggopus",
                         "folderId": self._folder_id,
-                        "speed": "1.1",
+                        "speed": "1.0",
                     },
                 )
                 resp.raise_for_status()
